@@ -15,10 +15,9 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
+#define RECV_DATA (1024)
 
-#define RECV_DATA         (128)
-
-
+void ClientInit(void);
 
 #endif
 

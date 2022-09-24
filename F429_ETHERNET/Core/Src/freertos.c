@@ -51,18 +51,16 @@
 /* USER CODE BEGIN Variables */
 
 /* USER CODE END Variables */
-osThreadId ClientHandle;
+osThreadId startup_threadHandle;
 osThreadId UsartHandle;
-osThreadId Client_recvHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
 
 /* USER CODE END FunctionPrototypes */
 
-void StartDefaultTask(void const * argument);
+void startup(void const * argument);
 void StartTask02(void const * argument);
-void StartTask03(void const * argument);
 
 extern void MX_LWIP_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -128,17 +126,13 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* definition and creation of Client */
-  osThreadDef(Client, StartDefaultTask, osPriorityNormal, 0, 1024);
-  ClientHandle = osThreadCreate(osThread(Client), NULL);
+  /* definition and creation of startup_thread */
+  osThreadDef(startup_thread, startup, osPriorityNormal, 0, 1024);
+  startup_threadHandle = osThreadCreate(osThread(startup_thread), NULL);
 
   /* definition and creation of Usart */
   osThreadDef(Usart, StartTask02, osPriorityIdle, 0, 128);
   UsartHandle = osThreadCreate(osThread(Usart), NULL);
-
-  /* definition and creation of Client_recv */
-  osThreadDef(Client_recv, StartTask03, osPriorityNormal, 0, 1024);
-  Client_recvHandle = osThreadCreate(osThread(Client_recv), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -146,56 +140,26 @@ void MX_FREERTOS_Init(void) {
 
 }
 
-/* USER CODE BEGIN Header_StartDefaultTask */
+/* USER CODE BEGIN Header_startup */
 /**
-  * @brief  Function implementing the defaultTask thread.
+  * @brief  Function implementing the startup_thread thread.
   * @param  argument: Not used
   * @retval None
   */
-/* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void const * argument)
+/* USER CODE END Header_startup */
+void startup(void const * argument)
 {
   /* init code for LWIP */
   MX_LWIP_Init();
-  /* USER CODE BEGIN StartDefaultTask */
-	
-  struct sockaddr_in conn_addr;				//连接地址 
-	int conn_fd;								        //服务器的 socked fd=file descriptor
-	
+  /* USER CODE BEGIN startup */
+	ClientInit();
+	vTaskDelete(startup_threadHandle);
   /* Infinite loop */
   for(;;)
-  {	
-		conn_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-		if(conn_fd<0)
-		{
-		  vTaskDelay(10);
-      continue;
-		}
-		conn_addr.sin_family = AF_INET;
-		conn_addr.sin_port = htons(5001);
-		conn_addr.sin_addr.s_addr = inet_addr("10.2.133.77");
-		memset(&(conn_addr.sin_zero), 0, sizeof(conn_addr.sin_zero));    //?
-		
-		if( connect(conn_fd, (struct sockaddr *)&conn_addr, sizeof(struct sockaddr_in)) == -1)
-		{
-			printf("connect error\n");
-			closesocket(conn_fd);
-			vTaskDelay(10);
-			continue;
-		}
-		printf("connect successful!conn_fd=%d\r\n",conn_fd);  
-		while(1)
-		{
-			char bTmpSendBuf[]="hello server!This is F429ZIT6 connect!\n";
-			 if(write(conn_fd,bTmpSendBuf,sizeof(bTmpSendBuf))<0)
-        break;
-			
-			HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
-			vTaskDelay(1000);
-		}
-		closesocket(conn_fd);
+  {
+    osDelay(1);
   }
-  /* USER CODE END StartDefaultTask */
+  /* USER CODE END startup */
 }
 
 /* USER CODE BEGIN Header_StartTask02 */
@@ -225,36 +189,11 @@ void StartTask02(void const * argument)
 		printf("----------------------------------------------\r\n");
 		printf("FreeHeapSize:%d\n",xPortGetFreeHeapSize());
 		
-		HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+		HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
 		vTaskDelay(2000);
 //    osDelay(1);
   }
   /* USER CODE END StartTask02 */
-}
-
-/* USER CODE BEGIN Header_StartTask03 */
-/**
-* @brief Function implementing the Client_recv thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartTask03 */
-void StartTask03(void const * argument)
-{
-  /* USER CODE BEGIN StartTask03 */
-
-	char *recv_data;
-	int recv_data_len;
-	recv_data = (char *)pvPortMalloc(RECV_DATA);
-  /* Infinite loop */
-  for(;;)
-  {
-//			recv_data_len = recv(conn_fd, recv_data, RECV_DATA, 0);
-//			if(recv_data_len>0)
-//				write(conn_fd,recv_data,recv_data_len);
-    osDelay(1);
-  }
-  /* USER CODE END StartTask03 */
 }
 
 /* Private application code --------------------------------------------------*/
